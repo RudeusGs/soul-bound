@@ -1,0 +1,10 @@
+# Godot
+.import/
+.export/
+*.import
+
+# Art assets
+assets/
+
+# Cache
+.godot/
