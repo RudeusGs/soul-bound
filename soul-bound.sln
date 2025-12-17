@@ -1,0 +1,19 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "soul-bound", "soul-bound.csproj", "{E364B0BF-2326-4551-9A3F-8E136E442CBA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+	Debug|Any CPU = Debug|Any CPU
+	ExportDebug|Any CPU = ExportDebug|Any CPU
+	ExportRelease|Any CPU = ExportRelease|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E364B0BF-2326-4551-9A3F-8E136E442CBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E364B0BF-2326-4551-9A3F-8E136E442CBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E364B0BF-2326-4551-9A3F-8E136E442CBA}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
+		{E364B0BF-2326-4551-9A3F-8E136E442CBA}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
+		{E364B0BF-2326-4551-9A3F-8E136E442CBA}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
+		{E364B0BF-2326-4551-9A3F-8E136E442CBA}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+	EndGlobalSection
+EndGlobal
