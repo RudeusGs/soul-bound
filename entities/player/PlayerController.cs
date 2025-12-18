@@ -3,8 +3,11 @@ using Godot;
 public partial class PlayerController : Node
 {
     public Vector2 MoveInput { get; private set; }
+    public bool IsRunning { get; private set; }
+    public bool IsAttacking { get; private set; }
 
-    public override void _Process(double delta)
+    // Đọc input từ người chơi và lưu trạng thái điều khiển
+    public void Tick()
     {
         MoveInput = Input.GetVector(
             "ui_left",
@@ -12,5 +15,8 @@ public partial class PlayerController : Node
             "ui_up",
             "ui_down"
         );
+
+        IsRunning = Input.IsActionPressed("run");
+        IsAttacking = Input.IsActionJustPressed("attack");
     }
 }
