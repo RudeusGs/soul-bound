@@ -17,6 +17,6 @@ public partial class PlayerController : Node
         );
 
         IsRunning = Input.IsActionPressed("run");
-        IsAttacking = Input.IsActionJustPressed("attack");
+        IsAttacking = Input.IsActionPressed("attack");
     }
 }

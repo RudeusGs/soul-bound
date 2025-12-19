@@ -1,0 +1,30 @@
+[gd_scene load_steps=7 format=3 uid="uid://64snhbx87i0w"]
+
+[ext_resource type="Script" uid="uid://dcqqbwkmskshd" path="res://entities/enemies/base/Enemy.cs" id="1_8nqel"]
+[ext_resource type="Script" uid="uid://cuqqoga3qo411" path="res://entities/enemies/base/EnemyMovement.cs" id="2_cuvyx"]
+[ext_resource type="Script" uid="uid://bxo7qog44hyvk" path="res://entities/enemies/base/EnemyCombat.cs" id="3_d2rjt"]
+[ext_resource type="Script" uid="uid://bfkmardd0l3cy" path="res://entities/enemies/base/EnemyAnimation.cs" id="4_u4hpe"]
+[ext_resource type="Script" uid="uid://cx8ad10fx3l4l" path="res://entities/enemies/base/EnemyBrain.cs" id="5_nck0n"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_edvsq"]
+
+[node name="enemy" type="CharacterBody2D"]
+script = ExtResource("1_8nqel")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_edvsq")
+animation = &"smileboss1_walk_up"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+
+[node name="EnemyMovement" type="Node" parent="."]
+script = ExtResource("2_cuvyx")
+
+[node name="EnemyCombat" type="Node" parent="."]
+script = ExtResource("3_d2rjt")
+
+[node name="EnemyAnimation" type="Node" parent="."]
+script = ExtResource("4_u4hpe")
+
+[node name="EnemyBrain" type="Node" parent="."]
+script = ExtResource("5_nck0n")

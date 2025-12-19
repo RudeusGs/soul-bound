@@ -1,5 +1,4 @@
 using Godot;
-using System;
 
 public partial class PlayerAttack : Node
 {
@@ -8,7 +7,8 @@ public partial class PlayerAttack : Node
     private PlayerAnimation _animation;
     private bool _isAttacking = false;
     public bool IsAttacking => _isAttacking;
-    private float _attackDuration = 0.6f;
+    private float _attackDuration = 0.47f;
+    private float _cooldown = 0.1f;
     private float _timer;
 
     // Gắn reference tới Player, Movement và Animation
@@ -22,16 +22,16 @@ public partial class PlayerAttack : Node
     // Xử lý logic tấn công theo thời gian
     public void Tick(bool attackInput, double delta)
     {
+        _timer -= (float)delta;
+
         if (_isAttacking)
         {
-            _timer -= (float)delta;
             if (_timer <= 0f)
                 EndAttack();
-
             return;
         }
 
-        if (attackInput)
+        if (attackInput && _timer <= 0f)
             StartAttack();
     }
 
@@ -49,6 +49,7 @@ public partial class PlayerAttack : Node
     private void EndAttack()
     {
         _isAttacking = false;
+        _timer = _cooldown;
         _movement.SetCanMove(true);
     }
 }

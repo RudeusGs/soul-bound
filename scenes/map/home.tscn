@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://6yo88jfep61f"]
+
+[ext_resource type="PackedScene" uid="uid://du0dpybc75ews" path="res://scenes/player/player.tscn" id="1_rbjhn"]
+[ext_resource type="PackedScene" uid="uid://d1pq26n1tt0ir" path="res://scenes/enemies/smile/smileboss_1.tscn" id="2_yec3x"]
+
+[node name="home" type="Node2D"]
+
+[node name="player" parent="." instance=ExtResource("1_rbjhn")]
+
+[node name="smileboss1" parent="." instance=ExtResource("2_yec3x")]
+visible = true
+position = Vector2(536, 276)

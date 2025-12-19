@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="soul-bound"
-run/main_scene="uid://du0dpybc75ews"
+run/main_scene="uid://6yo88jfep61f"
 config/features=PackedStringArray("4.5", "C#", "Forward Plus")
 
 [dotnet]
