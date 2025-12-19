@@ -13,6 +13,7 @@ public partial class Player : CharacterBody2D
     // Khởi tạo và liên kết các module của Player
     public override void _Ready()
     {
+        AddToGroup("player");
         Controller = GetNode<PlayerController>("PlayerController");
         Movement = GetNode<PlayerMovement>("PlayerMovement");
         Animation = GetNode<PlayerAnimation>("PlayerAnimation");

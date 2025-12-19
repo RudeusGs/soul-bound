@@ -8,12 +8,21 @@ public partial class EnemyBrain : Node
     private EnemyAnimation _anim;
     private EnemyBlackboard _bb;
 
+    [ExportGroup("Vision")]
+    [Export] public NodePath VisionAreaPath = "../VisionArea";
+    [Export] public bool LoseTargetWhenExit = true;
+
+    [ExportGroup("Chase")]
+    [Export] public float ChaseStopDistance = 10f;
+
     [ExportGroup("Patrol")]
     [Export] public bool EnablePatrol = true;
     [Export] public float PatrolRadius = 200f;
     [Export] public float StopDistance = 6f;
     [Export] public float IdleMinTime = 1.0f;
     [Export] public float IdleMaxTime = 3.0f;
+
+    private Area2D _visionArea;
 
     private Vector2 _homePos;
     private Vector2 _patrolTarget;
@@ -27,11 +36,43 @@ public partial class EnemyBrain : Node
         _combat = combat;
         _anim = anim;
         _bb = bb;
+
         _homePos = _enemy.GlobalPosition;
+
+        _visionArea = GetNodeOrNull<Area2D>(VisionAreaPath);
+        if (_visionArea != null)
+        {
+            _visionArea.BodyEntered += OnVisionBodyEntered;
+            _visionArea.BodyExited += OnVisionBodyExited;
+        }
+        else
+        {
+            GD.PrintErr("[EnemyBrain] Missing VisionArea node.");
+        }
     }
 
     public void Tick(double delta)
     {
+        if (_bb.Target != null && _bb.Target.IsInsideTree())
+        {
+            _bb.IsChasing = true;
+            _bb.IsAttacking = false;
+            var toTarget = _bb.Target.GlobalPosition - _enemy.GlobalPosition;
+            if (toTarget.Length() <= ChaseStopDistance)
+            {
+                _movement.Stop();
+            }
+            else
+            {
+                var dir = toTarget.Normalized();
+                _movement.SetDesiredVelocity(dir * _enemy.RunSpeed);
+
+            }
+
+            return;
+        }
+
+        _bb.IsChasing = false;
         _bb.IsAttacking = false;
 
         if (!EnablePatrol)
@@ -61,15 +102,33 @@ public partial class EnemyBrain : Node
             _movement.Stop();
             return;
         }
+        var dir2 = (_patrolTarget - _enemy.GlobalPosition).Normalized();
+        _movement.SetDesiredVelocity(dir2 * _enemy.WalkSpeed);
 
-        var dir = (_patrolTarget - _enemy.GlobalPosition).Normalized();
-        _movement.SetDesiredVelocity(dir * _enemy.MoveSpeed);
+    }
+
+    private void OnVisionBodyEntered(Node body)
+    {
+        if (body is Node2D n2d && body.IsInGroup("player"))
+        {
+            _bb.Target = n2d;
+        }
+    }
+
+    private void OnVisionBodyExited(Node body)
+    {
+        if (!LoseTargetWhenExit) return;
+
+        if (body == _bb.Target)
+        {
+            _bb.Target = null;
+        }
     }
 
     public void OnDamaged(Node2D attacker)
     {
-        // Tạm thời bỏ qua. Sau này neutral/hostile/boss sẽ xử lý ở FSM.
-        // Nếu muốn: bị đánh thì dừng tuần tra, chuyển sang chase.
+        if (attacker != null && attacker.IsInGroup("player"))
+            _bb.Target = attacker;
     }
 
     private Vector2 PickRandomPointInRadius(Vector2 center, float radius)

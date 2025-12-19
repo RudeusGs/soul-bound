@@ -23,6 +23,7 @@ public class EnemyBlackboard
 
     public bool IsAttacking;
     public bool IsDead;
+    public bool IsChasing;
 
     // NEW: hướng để idle đúng
     public FacingDir Facing = FacingDir.Down;

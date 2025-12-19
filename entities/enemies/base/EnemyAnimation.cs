@@ -37,9 +37,15 @@ public partial class EnemyAnimation : Node
 
         var suffix = FacingToSuffix(bb.Facing);
         if (v.Length() > 1f)
-            Play($"{AnimPrefix}_walk_{suffix}");
+        {
+            var moveAnim = bb.IsChasing ? "run" : "walk";
+            Play($"{AnimPrefix}_{moveAnim}_{suffix}");
+        }
         else
+        {
             Play($"{AnimPrefix}_idle_{suffix}");
+        }
+
     }
 
     private FacingDir FacingFromVelocity(Vector2 v)
