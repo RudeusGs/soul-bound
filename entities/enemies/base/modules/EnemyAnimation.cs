@@ -5,7 +5,10 @@ public partial class EnemyAnimation : Node
     private Enemy _enemy;
     private AnimatedSprite2D _sprite;
     private string _current = "";
+    [Export] public float MoveEnterSpeed = 12f; // ngưỡng bắt đầu đi
+    [Export] public float MoveExitSpeed = 6f;  // ngưỡng đứng yên
 
+    private bool _isMoving = false;
     [Export] public string AnimPrefix = "smileboss1"; // đổi per enemy
     [Export] public bool HasDeadAnim = false;
     [Export] public bool HasAttackAnim = false;
@@ -20,25 +23,21 @@ public partial class EnemyAnimation : Node
     {
         var bb = _enemy.BB;
         var v = _enemy.Velocity;
+        float speed = v.Length();
 
-        if (bb.IsDead && HasDeadAnim)
-        {
-            Play($"{AnimPrefix}_dead");
-            return;
-        }
+        // hysteresis: chống rung
+        if (!_isMoving && speed >= MoveEnterSpeed)
+            _isMoving = true;
+        else if (_isMoving && speed <= MoveExitSpeed)
+            _isMoving = false;
 
-        if (bb.IsAttacking && HasAttackAnim)
-        {
-            Play($"{AnimPrefix}_attack");
-            return;
-        }
-
-        if (v.Length() > 1f)
+        // CHỈ đổi hướng khi thật sự đang di chuyển
+        if (_isMoving)
             bb.Facing = FacingFromVelocity(v);
 
         var suffix = FacingToSuffix(bb.Facing);
 
-        if (v.Length() > 1f)
+        if (_isMoving)
         {
             var moveAnim = bb.IsChasing ? "run" : "walk";
             Play($"{AnimPrefix}_{moveAnim}_{suffix}");
@@ -47,6 +46,7 @@ public partial class EnemyAnimation : Node
         {
             Play($"{AnimPrefix}_idle_{suffix}");
         }
+
     }
 
     private static FacingDir FacingFromVelocity(Vector2 v)
