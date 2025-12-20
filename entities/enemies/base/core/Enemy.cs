@@ -5,7 +5,6 @@ public partial class Enemy : CharacterBody2D
     [Export] public float WalkSpeed = 70f;
     [Export] public float RunSpeed = 100f;
 
-
     public EnemyMovement Movement { get; private set; }
     public EnemyCombat Combat { get; private set; }
     public EnemyAnimation Anim { get; private set; }
@@ -46,8 +45,6 @@ public partial class Enemy : CharacterBody2D
     // Hook cho hệ damage gọi vào đây
     public void OnDamaged(Node2D attacker)
     {
-        BB.LastAttacker = attacker;
-        BB.RememberAggro(attacker);
         Brain.OnDamaged(attacker);
     }
 }
