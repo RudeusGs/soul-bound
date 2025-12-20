@@ -688,7 +688,7 @@ animations = [{
 radius = 14.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_26q5v"]
-radius = 269.02972
+radius = 195.04102
 
 [node name="smileboss1" instance=ExtResource("1_eg4jx")]
 

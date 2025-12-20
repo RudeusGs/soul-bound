@@ -20,6 +20,7 @@ public partial class EnemyAnimation : Node
     {
         var bb = _enemy.BB;
         var v = _enemy.Velocity;
+
         if (bb.IsDead && HasDeadAnim)
         {
             Play($"{AnimPrefix}_dead");
@@ -36,6 +37,7 @@ public partial class EnemyAnimation : Node
             bb.Facing = FacingFromVelocity(v);
 
         var suffix = FacingToSuffix(bb.Facing);
+
         if (v.Length() > 1f)
         {
             var moveAnim = bb.IsChasing ? "run" : "walk";
@@ -45,10 +47,9 @@ public partial class EnemyAnimation : Node
         {
             Play($"{AnimPrefix}_idle_{suffix}");
         }
-
     }
 
-    private FacingDir FacingFromVelocity(Vector2 v)
+    private static FacingDir FacingFromVelocity(Vector2 v)
     {
         if (Mathf.Abs(v.X) > Mathf.Abs(v.Y))
             return v.X >= 0 ? FacingDir.Right : FacingDir.Left;
@@ -56,7 +57,7 @@ public partial class EnemyAnimation : Node
             return v.Y >= 0 ? FacingDir.Down : FacingDir.Up;
     }
 
-    private string FacingToSuffix(FacingDir f) => f switch
+    private static string FacingToSuffix(FacingDir f) => f switch
     {
         FacingDir.Up => "up",
         FacingDir.Down => "down",

@@ -1,10 +1,11 @@
-[gd_scene load_steps=7 format=3 uid="uid://64snhbx87i0w"]
+[gd_scene load_steps=8 format=3 uid="uid://64snhbx87i0w"]
 
-[ext_resource type="Script" uid="uid://dcqqbwkmskshd" path="res://entities/enemies/base/Enemy.cs" id="1_8nqel"]
-[ext_resource type="Script" uid="uid://cuqqoga3qo411" path="res://entities/enemies/base/EnemyMovement.cs" id="2_cuvyx"]
-[ext_resource type="Script" uid="uid://bxo7qog44hyvk" path="res://entities/enemies/base/EnemyCombat.cs" id="3_d2rjt"]
-[ext_resource type="Script" uid="uid://bfkmardd0l3cy" path="res://entities/enemies/base/EnemyAnimation.cs" id="4_u4hpe"]
-[ext_resource type="Script" uid="uid://cx8ad10fx3l4l" path="res://entities/enemies/base/EnemyBrain.cs" id="5_nck0n"]
+[ext_resource type="Script" uid="uid://cu4ghjeby4axw" path="res://entities/enemies/base/core/Enemy.cs" id="1_cuvyx"]
+[ext_resource type="Script" uid="uid://cksqqa5g5h6af" path="res://entities/enemies/base/modules/EnemyMovement.cs" id="2_d2rjt"]
+[ext_resource type="Script" uid="uid://ba6fol7nkj54" path="res://entities/enemies/base/modules/EnemyCombat.cs" id="3_u4hpe"]
+[ext_resource type="Script" uid="uid://blmq812i6o471" path="res://entities/enemies/base/modules/EnemyAnimation.cs" id="4_nck0n"]
+[ext_resource type="Script" uid="uid://bar8mhr82tj7y" path="res://entities/enemies/base/modules/EnemyBrain.cs" id="5_f7vtg"]
+[ext_resource type="Script" uid="uid://dvrjc8rfqgi4a" path="res://entities/enemies/ai/perception/VisionSensor.cs" id="6_d2rjt"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_edvsq"]
 animations = [{
@@ -15,7 +16,7 @@ animations = [{
 }]
 
 [node name="enemy" type="CharacterBody2D"]
-script = ExtResource("1_8nqel")
+script = ExtResource("1_cuvyx")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_edvsq")
@@ -24,17 +25,22 @@ animation = &"new_animation"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 
 [node name="EnemyMovement" type="Node" parent="."]
-script = ExtResource("2_cuvyx")
+script = ExtResource("2_d2rjt")
 
 [node name="EnemyCombat" type="Node" parent="."]
-script = ExtResource("3_d2rjt")
+script = ExtResource("3_u4hpe")
 
 [node name="EnemyAnimation" type="Node" parent="."]
-script = ExtResource("4_u4hpe")
+script = ExtResource("4_nck0n")
 
 [node name="EnemyBrain" type="Node" parent="."]
-script = ExtResource("5_nck0n")
+script = ExtResource("5_f7vtg")
 
 [node name="VisionArea" type="Area2D" parent="."]
+script = ExtResource("6_d2rjt")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="VisionArea"]
+
+[node name="RangeAttack" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RangeAttack"]

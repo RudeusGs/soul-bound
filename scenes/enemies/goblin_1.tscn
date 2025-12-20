@@ -576,7 +576,7 @@ animations = [{
 size = Vector2(16, 11)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_g4203"]
-radius = 142.0317
+radius = 92.69439
 
 [node name="goblin1" instance=ExtResource("1_g4203")]
 scale = Vector2(2, 2)

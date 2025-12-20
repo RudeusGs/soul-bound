@@ -32,6 +32,6 @@ public partial class EnemyCombat : Node
         _cd = AttackCooldown;
 
         // TODO: gọi vào hệ thống damage
-        // Ví dụ: target.GetNode<Health>("Health").TakeDamage(...)
+        // target.GetNode<Health>("Health").TakeDamage(...)
     }
 }
