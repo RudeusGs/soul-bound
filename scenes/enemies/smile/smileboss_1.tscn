@@ -694,7 +694,8 @@ radius = 195.04102
 
 [node name="AnimatedSprite2D" parent="." index="0"]
 sprite_frames = SubResource("SpriteFrames_gqwdu")
-animation = &"smileboss1_run_up"
+animation = &"smileboss1_walk_left"
+frame_progress = 0.28654748
 
 [node name="CollisionShape2D" parent="." index="1"]
 position = Vector2(1, 4)

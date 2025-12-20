@@ -122,54 +122,71 @@ public sealed class ChaseState : IEnemyState
     /// </summary>
     public void Tick(double delta)
     {
-        // Nếu không còn target
+        float dt = (float)Mathf.Max(0.0001, (float)delta);
         if (_bb.Target == null || !_bb.Target.IsInsideTree())
         {
-            // Nếu còn grace period → chạy về vị trí cuối cùng
             if (_bb.HasLastKnownPos && _bb.LoseSightTimer > 0)
             {
-                var dir = Steering.Seek(_enemy.GlobalPosition, _bb.LastKnownTargetPos);
-                _move.SetDesiredVelocity(dir * _enemy.RunSpeed);
+                var toMem = _bb.LastKnownTargetPos - _enemy.GlobalPosition;
+                float distMem = toMem.Length();
+                if (distMem <= _stopEnter)
+                {
+                    _move.Stop();
+                    return;
+                }
+                float maxSpeedThisTick = distMem / dt;
+                float speed = Mathf.Min(_enemy.RunSpeed, maxSpeedThisTick);
+                var dir = toMem / distMem;
+
+                _move.SetDesiredVelocity(dir * speed);
                 return;
             }
 
-            // Hết grace → dừng chase
             _bb.IsChasing = false;
             _move.Stop();
             return;
         }
-
-        // --- Target còn tồn tại ---
-
-        // Tính vận tốc target dựa trên vị trí frame trước
         var cur = _bb.Target.GlobalPosition;
-        _vel = (cur - _lastPos) / (float)Mathf.Max(0.0001, (float)delta);
+        _vel = (cur - _lastPos) / dt;
         _lastPos = cur;
 
-        // Cập nhật trí nhớ
         _bb.LastKnownTargetPos = cur;
         _bb.HasLastKnownPos = true;
 
-        // Dự đoán vị trí target trong tương lai
         var predicted = cur + _vel * _leadTime;
-        var dist = _enemy.GlobalPosition.DistanceTo(predicted);
 
-        // Hysteresis:
-        // - Vào gần thì dừng
-        // - Ra xa mới chạy lại
-        bool shouldStop = dist <= _stopEnter;
-        bool shouldMove = dist >= _stopExit;
+        var to = predicted - _enemy.GlobalPosition;
+        float dist = to.Length();
+        bool isMoving = _enemy.Velocity.Length() > 0.1f;
 
-        if (shouldStop)
+        if (isMoving)
+        {
+            if (dist <= _stopEnter)
+            {
+                _move.Stop();
+                return;
+            }
+        }
+        else
+        {
+            if (dist < _stopExit)
+            {
+                _move.Stop();
+                return;
+            }
+        }
+
+        if (dist <= 0.001f)
         {
             _move.Stop();
             return;
         }
 
-        if (shouldMove || _enemy.Velocity.Length() > 0.1f)
-        {
-            var dir = Steering.Seek(_enemy.GlobalPosition, predicted);
-            _move.SetDesiredVelocity(dir * _enemy.RunSpeed);
-        }
+        float maxSpeed = dist / dt;
+        float finalSpeed = Mathf.Min(_enemy.RunSpeed, maxSpeed);
+        var dirFinal = to / dist;
+
+        _move.SetDesiredVelocity(dirFinal * finalSpeed);
     }
+
 }
