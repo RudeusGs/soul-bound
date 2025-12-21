@@ -9,7 +9,6 @@ public partial class EnemyBrain : Node
     private EnemyAnimation _anim;
     private EnemyBlackboard _bb;
 
-    // AI modules
     private EnemyMemory _memory;
     private UtilityBrain _utility;
     private StateMachine _sm;
@@ -20,8 +19,10 @@ public partial class EnemyBrain : Node
     [Export] public MemoryConfig MemoryCfg;
 
     [ExportGroup("AI/Links")]
-    [Export] public NodePath VisionSensorPath = "../VisionArea"; // bạn có thể attach VisionSensor script vào node này
+    [Export] public NodePath VisionSensorPath = "../VisionArea";
+    [Export] public NodePath AttackRangeSensorPath = "../AttackRangeArea";
 
+    private AttackRangeSensor _attackRange;
     private VisionSensor _vision;
 
     public void Setup(Enemy enemy, EnemyMovement movement, EnemyCombat combat, EnemyAnimation anim, EnemyBlackboard bb)
@@ -57,6 +58,8 @@ public partial class EnemyBrain : Node
                     {
                         if (_bb.Target == e.Actor)
                         {
+                            if (_bb.IsAttacking || _bb.RequestAttack)
+                                return;
                             _bb.LastKnownTargetPos = e.Position;
                             _bb.HasLastKnownPos = true;
                             _bb.Target = null;               
@@ -75,6 +78,28 @@ public partial class EnemyBrain : Node
         else
         {
             GD.PrintErr("[EnemyBrain] Missing VisionSensor. Attach VisionSensor.cs to VisionArea and set VisionSensorPath.");
+        }
+        _attackRange = GetNodeOrNull<AttackRangeSensor>(AttackRangeSensorPath);
+        if (_attackRange != null)
+        {
+            _attackRange.InRangeChanged += (actor, inRange) =>
+            {
+                if (inRange)
+                {
+                    if (_bb.Target == null || !_bb.Target.IsInsideTree())
+                        _bb.Target = actor;
+
+                    _bb.RequestAttack = true;
+                }
+                else
+                {
+                    _bb.RequestAttack = false;
+                }
+            };
+        }
+        else
+        {
+            GD.PrintErr("[EnemyBrain] Missing AttackRangeSensor. Attach AttackRangeSensor.cs to AttackRangeArea and set AttackRangeSensorPath.");
         }
     }
 
@@ -101,7 +126,11 @@ public partial class EnemyBrain : Node
         var action = _utility.Decide();
 
         // 1) Urgent actions phải chuyển ngay (không bị lock)
-        bool urgent = action == UtilityAction.Attack || action == UtilityAction.Chase;
+        bool urgent =
+            action == UtilityAction.Attack ||
+            action == UtilityAction.Chase ||
+            (_bb.LeashBroken && action == UtilityAction.ReturnHome);
+
 
         // 2) Nếu state hiện tại "kẹt" / không còn hợp lệ -> cho phép thoát ngay
         bool forceExitStuck =
@@ -128,11 +157,17 @@ public partial class EnemyBrain : Node
             case UtilityAction.Investigate:
                 return _sm.Change<InvestigateState>();
             case UtilityAction.ReturnHome:
+                _bb.RequestAttack = false;
+                _bb.IsAttacking = false;
+                _bb.Target = null;
+                _bb.HasLastKnownPos = false;
+                _bb.LoseSightTimer = 0;
                 return _sm.Change<ReturnHomeState>();
+
             case UtilityAction.Patrol:
                 return _sm.Change<PatrolState>();
             default:
-                return _sm.Change<PatrolState>(); // đừng để Idle nếu bạn muốn luôn patrol khi rảnh
+                return _sm.Change<PatrolState>();
         }
     }
 
@@ -142,6 +177,16 @@ public partial class EnemyBrain : Node
     {
         if (attacker == null || _bb.IsDead)
             return;
+
+        // Nếu leash đứt: chỉ phản kích ngắn, không chase
+        if (_bb.LeashBroken)
+        {
+            _bb.Target = attacker;
+            _bb.RetaliateTimer = 1.0;
+
+            // RequestAttack chỉ true khi thật sự đang trong tầm đánh (tránh giữ target “ảo”)
+            _bb.RequestAttack = _combat.IsInRange(attacker);
+        }
 
         // 1) Tăng mạnh nghi ngờ & cảnh giác
         _bb.Suspicion = Mathf.Clamp(_bb.Suspicion + 0.9f, 0f, 1f);
