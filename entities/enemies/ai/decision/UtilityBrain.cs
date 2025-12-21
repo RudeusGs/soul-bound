@@ -5,50 +5,58 @@ using Godot;
 ///
 /// Module ra quyết định (decision-making) theo mô hình Utility AI.
 ///
-/// Ý tưởng:
+/// Ý tưởng cốt lõi:
 /// - Mỗi hành động (Attack / Chase / Investigate / ReturnHome / Patrol) được chấm điểm 0..1
 /// - Hành động có điểm cao nhất sẽ được chọn cho frame hiện tại
 ///
-/// Vai trò:
-/// - Đọc dữ liệu từ EnemyBlackboard (Target, Suspicion, LoseSightTimer, LastKnownPos...)
-/// - Dựa trên bối cảnh hiện tại (khoảng cách, combat range, vị trí home)
-/// - Trả về UtilityAction "nên làm gì"
+/// Vai trò trong kiến trúc:
+/// - Đọc dữ liệu từ EnemyBlackboard (Target, Suspicion, LoseSightTimer, HasLastKnownPos...)
+/// - Dựa trên bối cảnh hiện tại (khoảng cách tới target, combat range, vị trí home)
+/// - Trả về UtilityAction để EnemyBrain quyết định chuyển state.
 ///
 /// UtilityBrain KHÔNG:
-/// - Không thực thi movement/attack trực tiếp
-/// - Không chuyển state trực tiếp
-///   → EnemyBrain là nơi gọi StateMachine.Change() theo action được trả về
+/// - Không điều khiển movement/attack trực tiếp
+/// - Không tự Change state
+///   → EnemyBrain sẽ gọi StateMachine.Change() theo action trả về.
 ///
-/// Lưu ý quan trọng khi dùng Utility AI:
-/// - Vì điểm số thay đổi theo thời gian, có thể xảy ra flip-flop (đổi action liên tục)
-///   → Cần StateMachine chống đổi lặp và EnemyBrain có debounce/lock timer.
+/// Chống flip-flop (dao động hành vi):
+/// - Codebase đã có lock timer ở EnemyBrain.
+/// - Riêng “leash/home” dùng hysteresis (EnterDist/ExitDist) để tránh rung khi ở gần ngưỡng.
+///
+/// Leash / ReturnHome (chống kiting):
+/// - Khi Enemy đi quá xa khỏi home → bật LeashBroken:
+///     + ReturnHome có điểm tuyệt đối (1.0) → bắt buộc quay về, không rượt nữa.
+///     + Chase/Investigate bị chặn (score=0) để tránh chạy tới chạy về.
+/// - Tuy nhiên để không bị người chơi “đánh ké”:
+///     + Nếu LeashBroken và bị đánh → cho phép “phản kích ngắn” bằng RetaliateTimer.
+///     + Phản kích chỉ xảy ra nếu attacker nằm trong tầm đánh (combat range).
 /// </summary>
 public sealed class UtilityBrain
 {
     /// <summary>
-    /// Enemy owner, dùng để lấy vị trí hiện tại.
+    /// Enemy owner – dùng lấy vị trí hiện tại (GlobalPosition).
     /// </summary>
     private readonly Enemy _enemy;
 
     /// <summary>
-    /// Blackboard – dữ liệu dùng chung cho AI (target, suspicion, timers...).
+    /// Blackboard – dữ liệu dùng chung của AI (target, suspicion, timers...).
     /// </summary>
     private readonly EnemyBlackboard _bb;
 
     /// <summary>
-    /// Module combat – dùng để kiểm tra phạm vi tấn công.
+    /// Module combat – dùng kiểm tra target có trong tầm đánh không.
     /// </summary>
     private readonly EnemyCombat _combat;
 
     /// <summary>
     /// Vị trí home (thường là vị trí spawn ban đầu).
-    /// Dùng để giới hạn phạm vi roaming và quyết định quay về.
+    /// Dùng làm mốc leash và quay về.
     /// </summary>
     private readonly Vector2 _homePos;
 
     /// <summary>
-    /// Khoảng cách tối đa Enemy được phép đi xa khỏi home.
-    /// Nếu vượt quá, UtilityBrain sẽ bắt đầu ưu tiên ReturnHome.
+    /// Ngưỡng khoảng cách tối đa để bắt đầu ưu tiên ReturnHome
+    /// (khi chưa LeashBroken, ReturnHome tăng dần theo độ xa).
     /// </summary>
     private readonly float _maxHomeDist;
 
@@ -58,8 +66,8 @@ public sealed class UtilityBrain
     /// enemy       : Enemy owner
     /// bb          : Blackboard
     /// combat      : Module combat
-    /// homePos     : Vị trí home
-    /// maxHomeDist : Giới hạn đi xa khỏi home
+    /// homePos     : vị trí home/spawn
+    /// maxHomeDist : ngưỡng “đi xa nhà” để ReturnHome bắt đầu có điểm
     /// </summary>
     public UtilityBrain(Enemy enemy, EnemyBlackboard bb, EnemyCombat combat, Vector2 homePos, float maxHomeDist = 400f)
     {
@@ -75,28 +83,44 @@ public sealed class UtilityBrain
     ///
     /// Tính điểm cho từng hành động và chọn hành động có điểm cao nhất.
     ///
-    /// Thứ tự ưu tiên thực tế:
-    /// - Attack thường thắng khi target ở trong range
-    /// - Chase khi còn target hoặc còn LoseSightTimer
-    /// - Investigate khi có LastKnownTargetPos và suspicion/damageAwareness đủ lớn
-    /// - ReturnHome khi đi quá xa và suspicion thấp
-    /// - Patrol khi không có target và suspicion thấp
+    /// Luồng hoạt động:
+    /// 1) Early exit: chết thì Idle.
+    /// 2) Update leash (EnterDist/ExitDist) để quyết định có “bắt buộc quay về” hay không.
+    /// 3) Tính score cho từng hành động.
+    /// 4) Chọn hành động có score cao nhất và trả về.
     ///
-    /// Trả về:
-    /// - UtilityAction tương ứng để EnemyBrain chuyển state.
+    /// Thứ tự ưu tiên thực tế (thường gặp):
+    /// - Attack: thắng khi target trong range (hoặc retaliate khi leash broken)
+    /// - Chase: khi còn target hoặc còn LoseSightTimer
+    /// - Investigate: khi còn LastKnownPos và suspicion/damageAwareness đủ lớn
+    /// - ReturnHome: khi đi xa nhà (đặc biệt khi LeashBroken → bắt buộc về)
+    /// - Patrol: nền khi không có target và suspicion thấp
     /// </summary>
     public UtilityAction Decide()
     {
         // Dead → không làm gì
         if (_bb.IsDead) return UtilityAction.Idle;
 
+        // ===== 1) LEASH CONTROL (hysteresis) =====
+        // distHome: khoảng cách hiện tại từ enemy tới home
+        float distHome = _enemy.GlobalPosition.DistanceTo(_homePos);
+
+        // Enter: vượt ngưỡng -> bật leash broken (bắt buộc quay về)
+        if (!_bb.LeashBroken && distHome >= _bb.LeashEnterDist)
+            _bb.LeashBroken = true;
+
+        // Exit: chỉ tắt leash khi về đủ gần home (tránh rung qua lại gần ngưỡng)
+        else if (_bb.LeashBroken && distHome <= _bb.LeashExitDist)
+            _bb.LeashBroken = false;
+
+        // ===== 2) SCORE EACH ACTION =====
         float sAttack = ScoreAttack();
         float sChase = ScoreChase();
         float sInv = ScoreInvestigate();
         float sHome = ScoreReturnHome();
         float sPatrol = ScorePatrol();
 
-        // Chọn action có score lớn nhất
+        // ===== 3) PICK BEST =====
         var best = UtilityAction.Idle;
         float bestScore = 0f;
 
@@ -110,7 +134,9 @@ public sealed class UtilityBrain
     }
 
     /// <summary>
-    /// Helper: cập nhật action tốt nhất nếu score s > bestScore.
+    /// Pick()
+    ///
+    /// Helper: cập nhật action tốt nhất nếu score mới lớn hơn bestScore.
     /// </summary>
     private void Pick(ref UtilityAction best, ref float bestScore, UtilityAction a, float s)
     {
@@ -124,59 +150,86 @@ public sealed class UtilityBrain
     /// <summary>
     /// ScoreAttack()
     ///
-    /// Chỉ có điểm khi:
-    /// - Có target hợp lệ
-    /// - Target nằm trong tầm đánh của EnemyCombat
+    /// Attack có điểm khi:
+    /// - Có target hợp lệ (Target != null && IsInsideTree)
+    /// - Và target trong combat range (EnemyCombat.IsInRange)
     ///
-    /// Score phụ thuộc vào Suspicion:
-    /// - Suspicion càng cao → càng "quyết đánh"
+    /// Hai chế độ:
+    /// A) Normal mode (LeashBroken = false):
+    /// - Chỉ attack khi RequestAttack = true (tức là player đang ở AttackRangeArea)
+    /// - Score gần như “chắc chắn thắng” để vào AttackState ổn định.
+    ///
+    /// B) LeashBroken mode (đang quay về):
+    /// - Tuyệt đối không chase, nhưng cho phép “phản kích ngắn” để tránh bị đánh ké.
+    /// - Phản kích chỉ diễn ra trong cửa sổ RetaliateTimer (>0) và target phải trong tầm đánh.
     /// </summary>
     private float ScoreAttack()
     {
-        if (_bb.Target == null || !_bb.Target.IsInsideTree()) return 0f;
+        // Không có target hợp lệ → không thể attack
+        if (_bb.Target == null || !_bb.Target.IsInsideTree())
+            return 0f;
+
+        // ===== LeashBroken: chỉ retaliate (phản kích ngắn) =====
+        if (_bb.LeashBroken)
+        {
+            // Hết thời gian phản kích → không attack
+            if (_bb.RetaliateTimer <= 0) return 0f;
+
+            // Chỉ phản kích nếu đủ gần (trong tầm đánh)
+            if (!_combat.IsInRange(_bb.Target)) return 0f;
+
+            // Phản kích dứt khoát
+            return 1f;
+        }
+
+        // ===== Normal: chỉ attack khi player ở AttackRangeArea =====
+        if (!_bb.RequestAttack) return 0f;
+
+        // Safety: phải trong tầm đánh
         if (!_combat.IsInRange(_bb.Target)) return 0f;
 
-        // Càng nghi ngờ cao càng dễ đánh (curve làm tăng tính dứt khoát)
-        return Curves.Sharp(_bb.Suspicion);
+        // Score cao để Attack thắng Chase, tránh flip-flop
+        return Mathf.Clamp(0.95f + 0.05f * _bb.Suspicion, 0f, 1f);
     }
 
     /// <summary>
     /// ScoreChase()
     ///
-    /// Có điểm khi:
+    /// Chase có điểm khi:
     /// - Có target hợp lệ, hoặc
-    /// - Vừa mới mất target nhưng còn trong grace period (LoseSightTimer > 0)
+    /// - Vừa mới mất target nhưng còn grace period (LoseSightTimer > 0)
     ///
-    /// Nếu không còn target và LoseSightTimer <= 0 → không chase.
+    /// Nếu LeashBroken:
+    /// - Chase bị chặn hoàn toàn (0) để “bắt buộc quay về”, chống chạy tới chạy về.
     ///
-    /// Score dựa trên Suspicion:
-    /// - Suspicion cao → chase quyết liệt hơn
+    /// Score dựa trên Suspicion (nghi ngờ càng cao → chase càng quyết).
     /// </summary>
     private float ScoreChase()
     {
+        // LeashBroken → tuyệt đối không chase
+        if (_bb.LeashBroken) return 0f;
+
         bool hasTarget = _bb.Target != null && _bb.Target.IsInsideTree();
         if (!hasTarget && _bb.LoseSightTimer <= 0) return 0f;
 
-        // Nếu không còn target nhưng còn timer => chase theo trí nhớ (LastKnownTargetPos)
+        // Baseline 0.3 để chase vẫn có động lực trong grace period
         return Mathf.Clamp(0.7f * _bb.Suspicion + 0.3f, 0f, 1f);
     }
 
     /// <summary>
     /// ScoreInvestigate()
     ///
-    /// Có điểm khi:
+    /// Investigate có điểm khi:
     /// - Có LastKnownTargetPos (HasLastKnownPos = true)
     ///
-    /// Score dựa trên:
-    /// - Suspicion: mức nghi ngờ tổng quát
-    /// - DamageAwareness: mức "cảnh giác do bị đánh" / bị tấn công bất ngờ
+    /// Nếu LeashBroken:
+    /// - Investigate bị chặn (0) để ưu tiên ReturnHome, tránh dao động.
     ///
-    /// Lưu ý:
-    /// - Nếu DamageAwareness không decay theo thời gian, Investigate có thể kéo dài
-    ///   → nên decay DamageAwareness trong EnemyMemory.Tick (nếu dùng biến này).
+    /// Score = kết hợp Suspicion và DamageAwareness.
     /// </summary>
     private float ScoreInvestigate()
     {
+        if (_bb.LeashBroken) return 0f;
         if (!_bb.HasLastKnownPos) return 0f;
 
         return Mathf.Clamp(
@@ -189,19 +242,25 @@ public sealed class UtilityBrain
     /// <summary>
     /// ScoreReturnHome()
     ///
-    /// Có điểm khi Enemy đi quá xa home (_maxHomeDist).
-    /// Khi đó, nếu Suspicion thấp thì ưu tiên quay về.
+    /// ReturnHome có điểm khi:
+    /// - Đi quá xa home (distHome >= _maxHomeDist)
     ///
-    /// Score = (độ "ít nghi ngờ") * (độ "xa nhà")
-    /// - Suspicion càng thấp → càng dễ bỏ cuộc quay về
-    /// - DistHome càng xa → score càng cao
+    /// Nếu LeashBroken:
+    /// - ReturnHome thắng tuyệt đối (1.0) để dứt khoát quay về.
+    ///
+    /// Nếu chưa LeashBroken:
+    /// - Score tăng theo độ xa nhà và mức “ít nghi ngờ” (lowSusp).
+    /// - Suspicion thấp → dễ bỏ cuộc quay về.
     /// </summary>
     private float ScoreReturnHome()
     {
         float distHome = _enemy.GlobalPosition.DistanceTo(_homePos);
+
+        // LeashBroken → bắt buộc quay về
+        if (_bb.LeashBroken) return 1f;
+
         if (distHome < _maxHomeDist) return 0f;
 
-        // Nếu nghi ngờ thấp mà đi quá xa => quay về
         float lowSusp = 1f - _bb.Suspicion;
         float far = Curves.InverseLerp(_maxHomeDist, _maxHomeDist * 1.5f, distHome);
         return Mathf.Clamp(lowSusp * far, 0f, 1f);
@@ -215,12 +274,11 @@ public sealed class UtilityBrain
     /// - Suspicion thấp
     ///
     /// Score bị giới hạn tối đa 0.4 để:
-    /// - Không "đè" lên Investigate/Chase khi suspicion còn cao
-    /// - Patrol chỉ thắng khi các hành động khác gần như 0
+    /// - Không “đè” lên Chase/Investigate khi suspicion còn cao.
     /// </summary>
     private float ScorePatrol()
     {
-        // Patrol khi không target + nghi ngờ thấp
+        // Có target thì không patrol
         if (_bb.Target != null && _bb.Target.IsInsideTree()) return 0f;
 
         float lowSusp = 1f - _bb.Suspicion;
