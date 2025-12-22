@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://64snhbx87i0w"]
+[gd_scene load_steps=11 format=3 uid="uid://64snhbx87i0w"]
 
 [ext_resource type="Script" uid="uid://cu4ghjeby4axw" path="res://entities/enemies/base/core/Enemy.cs" id="1_cuvyx"]
 [ext_resource type="Script" uid="uid://cksqqa5g5h6af" path="res://entities/enemies/base/modules/EnemyMovement.cs" id="2_d2rjt"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://blmq812i6o471" path="res://entities/enemies/base/modules/EnemyAnimation.cs" id="4_nck0n"]
 [ext_resource type="Script" uid="uid://bar8mhr82tj7y" path="res://entities/enemies/base/modules/EnemyBrain.cs" id="5_f7vtg"]
 [ext_resource type="Script" uid="uid://dvrjc8rfqgi4a" path="res://entities/enemies/ai/perception/VisionSensor.cs" id="6_d2rjt"]
+[ext_resource type="Script" uid="uid://2ekb6r542gpq" path="res://entities/enemies/ai/memory/MemoryConfig.cs" id="6_nck0n"]
 [ext_resource type="Script" uid="uid://dl6jad8vxelrx" path="res://entities/enemies/ai/perception/AttackRangeSensor.cs" id="7_u4hpe"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_edvsq"]
@@ -15,6 +16,11 @@ animations = [{
 "name": &"new_animation",
 "speed": 5.0
 }]
+
+[sub_resource type="Resource" id="Resource_f7vtg"]
+script = ExtResource("6_nck0n")
+SuspicionDecayPerSec = 0.12
+metadata/_custom_type_script = "uid://2ekb6r542gpq"
 
 [node name="enemy" type="CharacterBody2D"]
 script = ExtResource("1_cuvyx")
@@ -37,6 +43,7 @@ HasAttackAnim = true
 
 [node name="EnemyBrain" type="Node" parent="."]
 script = ExtResource("5_f7vtg")
+MemoryCfg = SubResource("Resource_f7vtg")
 
 [node name="VisionArea" type="Area2D" parent="."]
 script = ExtResource("6_d2rjt")

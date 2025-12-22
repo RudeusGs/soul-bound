@@ -740,15 +740,17 @@ size = Vector2(14.5, 10)
 radius = 264.01706
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_tb6mn"]
-radius = 31.036268
+radius = 41.503014
 
 [node name="goblin1" instance=ExtResource("1_g4203")]
 scale = Vector2(2, 2)
+WalkSpeed = 110.0
+RunSpeed = 140.0
 
 [node name="AnimatedSprite2D" parent="." index="0"]
 sprite_frames = SubResource("SpriteFrames_q344k")
-animation = &"goblin1_attack_up"
-frame_progress = 0.45476097
+animation = &"goblin1_attack_down"
+frame_progress = 0.62468904
 
 [node name="CollisionShape2D" parent="." index="1"]
 position = Vector2(-0.75, 5)

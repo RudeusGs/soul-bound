@@ -992,14 +992,16 @@ radius = 10.198039
 radius = 516.0349
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_4tar4"]
-radius = 56.008926
+radius = 78.31347
 
 [node name="smileboss1" instance=ExtResource("1_eg4jx")]
+WalkSpeed = 100.0
+RunSpeed = 130.0
 
 [node name="AnimatedSprite2D" parent="." index="0"]
 sprite_frames = SubResource("SpriteFrames_gqwdu")
-animation = &"smileboss1_attack_up"
-frame_progress = 0.51317537
+animation = &"smileboss1_attack_right"
+frame_progress = 0.26536024
 
 [node name="CollisionShape2D" parent="." index="1"]
 position = Vector2(1, 4)
