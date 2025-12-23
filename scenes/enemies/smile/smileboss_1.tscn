@@ -992,7 +992,7 @@ radius = 10.198039
 radius = 516.0349
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_4tar4"]
-radius = 78.31347
+radius = 67.06713
 
 [node name="smileboss1" instance=ExtResource("1_eg4jx")]
 WalkSpeed = 100.0

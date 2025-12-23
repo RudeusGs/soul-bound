@@ -165,32 +165,27 @@ public sealed class UtilityBrain
     /// </summary>
     private float ScoreAttack()
     {
-        // Không có target hợp lệ → không thể attack
         if (_bb.Target == null || !_bb.Target.IsInsideTree())
             return 0f;
 
-        // ===== LeashBroken: chỉ retaliate (phản kích ngắn) =====
+        // LeashBroken: retaliate
         if (_bb.LeashBroken)
         {
-            // Hết thời gian phản kích → không attack
             if (_bb.RetaliateTimer <= 0) return 0f;
-
-            // Chỉ phản kích nếu đủ gần (trong tầm đánh)
-            if (!_combat.IsInRange(_bb.Target)) return 0f;
-
-            // Phản kích dứt khoát
-            return 1f;
+            return _combat.IsInRange(_bb.Target) ? 1f : 0f;
         }
 
-        // ===== Normal: chỉ attack khi player ở AttackRangeArea =====
-        if (!_bb.RequestAttack) return 0f;
+        // Đã vào combat: giữ Attack miễn là còn trong AttackRange
+        if (_bb.InCombat)
+            return _combat.IsInRange(_bb.Target) ? 1f : 0f;
 
-        // Safety: phải trong tầm đánh
-        if (!_combat.IsInRange(_bb.Target)) return 0f;
+        // Chưa vào combat: chỉ bắt đầu khi vào EnterRange (đứng xa hơn)
+        if (!_combat.IsInEnterRange(_bb.Target)) return 0f;
 
-        // Score cao để Attack thắng Chase, tránh flip-flop
         return Mathf.Clamp(0.95f + 0.05f * _bb.Suspicion, 0f, 1f);
     }
+
+
 
     /// <summary>
     /// ScoreChase()
