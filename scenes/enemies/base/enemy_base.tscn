@@ -36,6 +36,8 @@ script = ExtResource("2_d2rjt")
 
 [node name="EnemyCombat" type="Node" parent="."]
 script = ExtResource("3_u4hpe")
+AttackRange = 50.0
+AttackEnterRange = 50.0
 
 [node name="EnemyAnimation" type="Node" parent="."]
 script = ExtResource("4_nck0n")

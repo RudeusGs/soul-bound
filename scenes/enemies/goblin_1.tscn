@@ -740,7 +740,7 @@ size = Vector2(14.5, 10)
 radius = 264.01706
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_tb6mn"]
-radius = 41.503014
+radius = 33.514923
 
 [node name="goblin1" instance=ExtResource("1_g4203")]
 scale = Vector2(2, 2)

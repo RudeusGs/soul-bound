@@ -1,15 +1,11 @@
-[gd_scene load_steps=4 format=3 uid="uid://6yo88jfep61f"]
+[gd_scene load_steps=3 format=3 uid="uid://6yo88jfep61f"]
 
 [ext_resource type="PackedScene" uid="uid://du0dpybc75ews" path="res://scenes/player/player.tscn" id="1_rbjhn"]
-[ext_resource type="PackedScene" uid="uid://d1pq26n1tt0ir" path="res://scenes/enemies/smile/smileboss_1.tscn" id="2_yec3x"]
 [ext_resource type="PackedScene" uid="uid://5x3s4iwlyygo" path="res://scenes/enemies/goblin_1.tscn" id="3_yec3x"]
 
 [node name="home" type="Node2D"]
 
 [node name="player" parent="." instance=ExtResource("1_rbjhn")]
-
-[node name="smileboss1" parent="." instance=ExtResource("2_yec3x")]
-position = Vector2(536, 276)
 
 [node name="goblin1" parent="." instance=ExtResource("3_yec3x")]
 position = Vector2(333, 201)

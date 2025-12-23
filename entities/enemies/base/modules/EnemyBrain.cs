@@ -58,14 +58,16 @@ public partial class EnemyBrain : Node
                     {
                         if (_bb.Target == e.Actor)
                         {
-                            if (_bb.IsAttacking || _bb.RequestAttack)
+                            if (_bb.IsAttacking || (_combat != null && _combat.IsInRange(e.Actor)))
                                 return;
+
                             _bb.LastKnownTargetPos = e.Position;
                             _bb.HasLastKnownPos = true;
-                            _bb.Target = null;               
-                            _bb.LoseSightTimer = 2.0f;     
+                            _bb.Target = null;
+                            _bb.LoseSightTimer = 2.0f;
                             _bb.TimeSinceLastSeen = 0;
                         }
+
                     }
                     else
                     {
@@ -88,12 +90,6 @@ public partial class EnemyBrain : Node
                 {
                     if (_bb.Target == null || !_bb.Target.IsInsideTree())
                         _bb.Target = actor;
-
-                    _bb.RequestAttack = true;
-                }
-                else
-                {
-                    _bb.RequestAttack = false;
                 }
             };
         }
@@ -101,6 +97,7 @@ public partial class EnemyBrain : Node
         {
             GD.PrintErr("[EnemyBrain] Missing AttackRangeSensor. Attach AttackRangeSensor.cs to AttackRangeArea and set AttackRangeSensorPath.");
         }
+
     }
 
     private void SetupStates()
@@ -109,8 +106,8 @@ public partial class EnemyBrain : Node
 
         _sm.Add(new PatrolState(_enemy, _movement, _homePos, radius: 200f, stopDist: 6f));
         _sm.Add(new InvestigateState(_enemy, _movement, _bb));
-        _sm.Add(new ChaseState(_enemy, _movement, _bb, stopEnter: 10f, stopExit: 16f, leadTime: 0.25f));
-        _sm.Add(new AttackState(_movement, _combat, _bb));
+        _sm.Add(new ChaseState(_enemy, _movement, _bb, stopEnter: 22f, stopExit: 28f, leadTime: 0.25f));
+        _sm.Add(new AttackState(_enemy, _movement, _combat, _bb));
         _sm.Add(new ReturnHomeState(_enemy, _movement, _homePos));
 
         _sm.Change<PatrolState>();
@@ -151,15 +148,19 @@ public partial class EnemyBrain : Node
         switch (a)
         {
             case UtilityAction.Attack:
+                _bb.IsAttacking = true;
                 return _sm.Change<AttackState>();
             case UtilityAction.Chase:
+                _bb.IsAttacking = false;
                 return _sm.Change<ChaseState>();
             case UtilityAction.Investigate:
+                _bb.IsAttacking = false;
                 return _sm.Change<InvestigateState>();
             case UtilityAction.ReturnHome:
                 _bb.RequestAttack = false;
                 _bb.IsAttacking = false;
                 _bb.Target = null;
+                _bb.InCombat = false;
                 _bb.HasLastKnownPos = false;
                 _bb.LoseSightTimer = 0;
                 return _sm.Change<ReturnHomeState>();
@@ -167,6 +168,7 @@ public partial class EnemyBrain : Node
             case UtilityAction.Patrol:
                 return _sm.Change<PatrolState>();
             default:
+                _bb.IsAttacking = false;
                 return _sm.Change<PatrolState>();
         }
     }

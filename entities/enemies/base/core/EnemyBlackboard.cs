@@ -109,6 +109,7 @@ public sealed class EnemyBlackboard
     /// - Đọc bởi: EnemyAnimation, Vision logic (tránh clear target giữa nhịp đánh)
     /// </summary>
     public bool IsAttacking;
+    public bool InCombat;
 
     /// <summary>
     /// Enemy đã chết.

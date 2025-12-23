@@ -6,12 +6,15 @@ public partial class EnemyCombat : Node
 
     [Export] public float AttackRange = 30f;
     [Export] public float AttackCooldown = 1.0f;
-
+    [Export] public float AttackEnterRange = 24f;
     private double _cd;
 
-    public void Setup(Enemy enemy) => _enemy = enemy;
-
-    public void Tick(double delta)
+    public void Setup(Enemy enemy)
+    {
+        _enemy = enemy;
+        AttackEnterRange = Mathf.Clamp(AttackEnterRange, 0f, AttackRange);
+    }
+public void Tick(double delta)
     {
         if (_cd > 0) _cd -= delta;
     }
@@ -33,5 +36,12 @@ public partial class EnemyCombat : Node
 
         // TODO: gọi vào hệ thống damage
         // target.GetNode<Health>("Health").TakeDamage(...)
+    }
+    public bool IsInEnterRange(Node2D target)
+    {
+        if (target == null) return false;
+        float enter = AttackEnterRange > 0f ? AttackEnterRange : AttackRange;
+        enter = Mathf.Clamp(enter, 0f, AttackRange);
+        return _enemy.GlobalPosition.DistanceTo(target.GlobalPosition) <= enter;
     }
 }
