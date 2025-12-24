@@ -85,17 +85,12 @@ public sealed class ReturnHomeState : IEnemyState
     /// </summary>
     public void Tick(double delta)
     {
-        // Khoảng cách hiện tại tới home
         var dist = _enemy.GlobalPosition.DistanceTo(_home);
-
-        // Nếu đã về đủ gần home → dừng lại
         if (dist <= _stopDist)
         {
             _move.Stop();
             return;
         }
-
-        // Tính hướng di chuyển về home và đi với tốc độ WalkSpeed
         var dir = Steering.Seek(_enemy.GlobalPosition, _home);
         _move.SetDesiredVelocity(dir * _enemy.WalkSpeed);
     }

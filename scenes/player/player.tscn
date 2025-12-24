@@ -1,4 +1,4 @@
-[gd_scene load_steps=165 format=3 uid="uid://du0dpybc75ews"]
+[gd_scene load_steps=166 format=3 uid="uid://du0dpybc75ews"]
 
 [ext_resource type="Script" uid="uid://bumxjmyk0h0nm" path="res://entities/player/Player.cs" id="1_je7p5"]
 [ext_resource type="Texture2D" uid="uid://b8dhd1ehiqp3f" path="res://assets/character/player1/Swordsman_lvl1_attack_with_shadow.png" id="2_fm80t"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" uid="uid://dqf7hegxasob7" path="res://entities/player/PlayerMovement.cs" id="8_uf5tr"]
 [ext_resource type="Script" uid="uid://dnqvov2i3ehw6" path="res://entities/player/PlayerAnimation.cs" id="9_lgqa7"]
 [ext_resource type="Script" uid="uid://cgf25jry0fxg1" path="res://entities/player/PlayerAttack.cs" id="10_8ydkj"]
+[ext_resource type="Script" uid="uid://cntdu6q00lrx6" path="res://entities/player/PlayerHitReceiver.cs" id="11_je7p5"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_ljgr3"]
 atlas = ExtResource("2_fm80t")
@@ -1179,19 +1180,24 @@ animations = [{
 }]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_tuyoq"]
-size = Vector2(11, 7)
+size = Vector2(10.5, 8)
 
 [node name="player" type="CharacterBody2D" groups=["player"]]
 scale = Vector2(2, 2)
 script = ExtResource("1_je7p5")
+BaseMoveSpeed = 160.0
 
 [node name="PlayerAnimated" type="AnimatedSprite2D" parent="."]
 position = Vector2(0, 1)
 sprite_frames = SubResource("SpriteFrames_dw050")
-animation = &"lv1_attack_up"
+animation = &"lv1_attack_down"
+
+[node name="FlashOverlay" type="AnimatedSprite2D" parent="PlayerAnimated"]
+visible = false
+z_index = 1
 
 [node name="PlayerHitbox" type="CollisionShape2D" parent="."]
-position = Vector2(-0.5, 9.5)
+position = Vector2(-0.75, 9)
 shape = SubResource("RectangleShape2D_tuyoq")
 
 [node name="PlayerController" type="Node" parent="."]
@@ -1207,7 +1213,7 @@ script = ExtResource("9_lgqa7")
 script = ExtResource("10_8ydkj")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-zoom = Vector2(1.2, 1.2)
+zoom = Vector2(1.5, 1.5)
 drag_horizontal_enabled = true
 drag_vertical_enabled = true
 drag_horizontal_offset = -1.0
@@ -1216,3 +1222,36 @@ drag_left_margin = 0.52
 drag_top_margin = 0.3
 drag_right_margin = 0.52
 drag_bottom_margin = 0.3
+
+[node name="PlayerHitReceiver" type="Node" parent="."]
+script = ExtResource("11_je7p5")
+PeakAlpha = 0.7
+
+[node name="PlayerMeleeCombat" type="Node" parent="."]
+
+[node name="AttackHitboxes" type="Node2D" parent="."]
+
+[node name="HitboxDown" type="Area2D" parent="AttackHitboxes"]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="AttackHitboxes/HitboxDown"]
+polygon = PackedVector2Array(-15, 15.5, -13.5, 19, -11.5, 21.5, -8, 24, -4, 25, 0, 25.5, 5.5, 25.5, 10, 23.5, 12.5, 22, 15, 20, 17, 17.5, 17.5, 15, 16, 14, 15, 16, 11, 17.5, 8, 19, 4.5, 20, 1, 20, -2, 20, -5, 19.5, -7.5, 18, -11.5, 16.5)
+
+[node name="HitboxUp" type="Area2D" parent="AttackHitboxes"]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="AttackHitboxes/HitboxUp"]
+position = Vector2(0.5, 7.5)
+rotation = -3.1415927
+polygon = PackedVector2Array(-15, 15.5, -13.5, 19, -11.5, 21.5, -8, 24, -4, 25, 0, 25.5, 5.5, 25.5, 10, 23.5, 12.5, 22, 15, 20, 17, 17.5, 17.5, 15, 16, 14, 15, 16, 11, 17.5, 8, 19, 4.5, 20, 1, 20, -2, 20, -5, 19.5, -7.5, 18, -11.5, 16.5)
+
+[node name="HitboxLeft" type="Area2D" parent="AttackHitboxes"]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="AttackHitboxes/HitboxLeft"]
+polygon = PackedVector2Array(-14.5, -15, -18.5, -12, -22, -6.5, -23, -3, -23.5, 5, -22, 9, -19.5, 13.5, -15.5, 16.5, -13.5, 17, -13, 16.5, -14, 14.5, -16, 11.5, -17.5, 6.5, -18.5, 1, -18, -5, -16.5, -9.5, -13, -14.5)
+
+[node name="HitboxRight" type="Area2D" parent="AttackHitboxes"]
+monitoring = false
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="AttackHitboxes/HitboxRight"]
+position = Vector2(0, 2)
+rotation = -3.1415927
+polygon = PackedVector2Array(-13.000001, 16.5, -16.5, 11.499998, -18, 6.4999986, -19, 1.4999983, -18, -4.5000014, -17, -7.500002, -14.999999, -10.500001, -12.499999, -13.000001, -11.999998, -15.500002, -14.999998, -15.500002, -17.499998, -13.500002, -19.499998, -10.500002, -22, -7.500002, -24, -2.500002, -24.5, 1.9999979, -23.5, 6.499998, -22, 9.999998, -20.000002, 13.999998, -17.500002, 15.999998)

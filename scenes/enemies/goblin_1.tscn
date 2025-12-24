@@ -394,7 +394,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"goblin1_attack_down",
-"speed": 10.0
+"speed": 8.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -414,7 +414,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"goblin1_attack_left",
-"speed": 10.0
+"speed": 8.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -434,7 +434,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"goblin1_attack_right",
-"speed": 10.0
+"speed": 8.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -454,7 +454,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"goblin1_attack_up",
-"speed": 10.0
+"speed": 8.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -744,17 +744,21 @@ radius = 33.514923
 
 [node name="goblin1" instance=ExtResource("1_g4203")]
 scale = Vector2(2, 2)
-WalkSpeed = 110.0
-RunSpeed = 140.0
+WalkSpeed = 160.0
+RunSpeed = 210.0
 
 [node name="AnimatedSprite2D" parent="." index="0"]
 sprite_frames = SubResource("SpriteFrames_q344k")
-animation = &"goblin1_attack_down"
-frame_progress = 0.62468904
+animation = &"goblin1_walk_down"
+frame_progress = 0.12197722
 
 [node name="CollisionShape2D" parent="." index="1"]
 position = Vector2(-0.75, 5)
 shape = SubResource("RectangleShape2D_g4203")
+
+[node name="EnemyCombat" parent="." index="3"]
+AttackCooldown = 0.6
+HitFrame = 3
 
 [node name="EnemyAnimation" parent="." index="4"]
 AnimPrefix = "goblin1"

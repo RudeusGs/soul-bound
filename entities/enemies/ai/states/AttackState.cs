@@ -1,10 +1,6 @@
 using Godot;
+using System;
 
-/// <summary>
-/// AttackState (Combat Orbit)
-/// - Khi cooldown: chạy vòng quanh target (orbit/strafe) để tạo độ khó.
-/// - Khi tới lượt đánh: dừng ngắn để ra đòn, rồi tiếp tục chạy vòng.
-/// </summary>
 public sealed class AttackState : IEnemyState
 {
     private readonly Enemy _enemy;
@@ -12,28 +8,58 @@ public sealed class AttackState : IEnemyState
     private readonly EnemyCombat _combat;
     private readonly EnemyBlackboard _bb;
 
-    // Orbit behavior
-    private int _orbitSign = 1;          // +1 / -1
-    private double _flipTimer = 0;       // đổi hướng chạy sau mỗi vài giây
+    private enum Phase
+    {
+        ReadyToAttack,   // đứng yên chờ tới lượt đánh
+        Swinging,        // đang đánh -> đứng yên
+        Repositioning,   // chạy quanh player (không đánh)
+        Settle           // đứng yên 1 nhịp
+    }
 
-    // Attack window
-    private double _attackHoldTimer = 0; // dừng ngắn khi vừa đánh (để anim hit)
+    private Phase _phase;
 
-    // Tuning (bạn chỉnh các số này cho hợp cảm giác)
-    private readonly float _strafeSpeedScale; // % RunSpeed
-    private readonly float _orbitBand;        // biên dao động quanh khoảng cách mong muốn
-    private readonly float _radialWeight;     // lực kéo vào/đẩy ra khi lệch khoảng cách
-    private readonly float _attackHoldTime;   // đứng lại bao lâu sau khi đánh
+    // =========================
+    // TUNING
+    // =========================
+    private readonly float _repositionSpeedScale;
+    private readonly float _repositionTimeMin;
+    private readonly float _repositionTimeMax;
 
+    // giữ khoảng cách quanh player trong [minDist, maxDist]
+    private readonly float _minDistOverride;
+    private readonly float _maxDistOverride;
+
+    private readonly float _settleTime;
+
+    // Nếu EnemyCombat không có “IsSwinging”, dùng fallback timer để thoát Swinging chắc chắn
+    private readonly float _fallbackSwingTime;
+
+    // =========================
+    // RUNTIME
+    // =========================
+    private double _swingTimer;
+
+    private double _repositionTimer;
+    private int _strafeSign = 1;         // +1/-1 chạy theo chiều kim / ngược kim
+    private Vector2 _lastPos;
+    private double _stuckTimer;
+
+    private double _settleTimer;
+
+    // ---------- Constructors ----------
+    // Khớp EnemyBrain bạn đang gọi: new AttackState(_enemy, _movement, _combat, _bb)
     public AttackState(
         Enemy enemy,
         EnemyMovement move,
         EnemyCombat combat,
         EnemyBlackboard bb,
-        float strafeSpeedScale = 0.75f, // chạy vòng nhanh/chậm
-        float orbitBand = 4f,           // band càng lớn càng lắc lư xa gần
-        float radialWeight = 0.6f,      // kéo vào/đẩy ra mạnh yếu
-        float attackHoldTime = 0.12f    // đứng lại sau mỗi hit
+        float repositionSpeedScale = 0.95f,
+        float repositionTimeMin = 0.35f,
+        float repositionTimeMax = 0.60f,
+        float minDist = 0f,
+        float maxDist = 0f,
+        float settleTime = 0.06f,
+        float fallbackSwingTime = 0.28f
     )
     {
         _enemy = enemy;
@@ -41,105 +67,212 @@ public sealed class AttackState : IEnemyState
         _combat = combat;
         _bb = bb;
 
-        _strafeSpeedScale = strafeSpeedScale;
-        _orbitBand = orbitBand;
-        _radialWeight = radialWeight;
-        _attackHoldTime = attackHoldTime;
+        _repositionSpeedScale = repositionSpeedScale;
+        _repositionTimeMin = repositionTimeMin;
+        _repositionTimeMax = repositionTimeMax;
+
+        _minDistOverride = minDist;
+        _maxDistOverride = maxDist;
+
+        _settleTime = settleTime;
+        _fallbackSwingTime = fallbackSwingTime;
     }
+
+    // Khớp signature cũ nếu chỗ nào còn dùng: new AttackState(_movement, _combat, _bb)
+    public AttackState(
+        EnemyMovement move,
+        EnemyCombat combat,
+        EnemyBlackboard bb
+    ) : this(move?.GetParent() as Enemy, move, combat, bb) { }
 
     public void Enter()
     {
-        // vào combat
+        _phase = Phase.ReadyToAttack;
+
         _bb.InCombat = true;
-
-        // Khi không swing thì để run/walk anim; chỉ bật IsAttacking đúng lúc ra đòn
         _bb.IsAttacking = false;
+        _bb.IsChasing = false;
 
-        // cho anim chạy kiểu "run" khi đang combat (nếu bạn muốn walk thì set false)
-        _bb.IsChasing = true;
+        _swingTimer = 0;
+        _repositionTimer = 0;
+        _stuckTimer = 0;
+        _settleTimer = 0;
 
-        _orbitSign = GD.Randf() < 0.5f ? -1 : 1;
-        _flipTimer = GD.RandRange(0.8, 1.6);
-        _attackHoldTimer = 0;
+        _move.Stop();
     }
 
     public void Exit()
     {
         _bb.InCombat = false;
         _bb.IsAttacking = false;
+        _bb.IsChasing = false;
+
         _move.Stop();
     }
 
     public void Tick(double delta)
     {
-        if (_bb.Target == null || !_bb.Target.IsInsideTree())
+        if (_enemy == null || _combat == null)
         {
-            _bb.IsAttacking = false;
             _move.Stop();
             return;
         }
 
-        // đổi hướng orbit thỉnh thoảng để khó đoán
-        _flipTimer -= delta;
-        if (_flipTimer <= 0)
+        if (_bb.Target == null || !_bb.Target.IsInsideTree())
         {
-            if (GD.Randf() < 0.7f) _orbitSign *= -1;
-            _flipTimer = GD.RandRange(0.8, 1.6);
-        }
-
-        // đang trong window đánh -> đứng yên
-        if (_attackHoldTimer > 0)
-        {
-            _attackHoldTimer -= delta;
-            if (_attackHoldTimer <= 0) _bb.IsAttacking = false;
-
+            _bb.IsAttacking = false;
+            _bb.IsChasing = false;
             _move.Stop();
             return;
         }
 
         Node2D target = _bb.Target;
 
-        // Nếu đến lượt đánh và trong tầm -> đánh
-        if (_combat.CanAttack(target) && _combat.IsInRange(target))
+        switch (_phase)
         {
-            _bb.IsAttacking = true;
+            case Phase.Swinging:
+                {
+                    // ĐANG ĐÁNH -> ĐỨNG YÊN
+                    _bb.IsAttacking = true;
+                    _bb.IsChasing = false;
+                    _move.Stop();
 
-            _move.Stop();
-            _combat.DoAttack(target);
+                    _swingTimer -= delta;
 
-            _attackHoldTimer = _attackHoldTime;
+                    // Thoát Swinging chắc chắn bằng timer (không bao giờ kẹt)
+                    if (_swingTimer <= 0)
+                    {
+                        _bb.IsAttacking = false;
+                        BeginReposition(target);
+                    }
+                    return;
+                }
 
-            // đôi lúc đổi hướng ngay sau mỗi hit
-            if (GD.Randf() < 0.35f) _orbitSign *= -1;
-            return;
+            case Phase.Repositioning:
+                {
+                    // ĐANG CHẠY -> KHÔNG ĐÁNH
+                    _bb.IsAttacking = false;
+                    _bb.IsChasing = true;
+
+                    // giảm thời gian chạy
+                    _repositionTimer -= delta;
+
+                    Vector2 enemyPos = _enemy.GlobalPosition;
+                    Vector2 targetPos = target.GlobalPosition;
+
+                    // phát hiện kẹt: không di chuyển được
+                    float moved = enemyPos.DistanceTo(_lastPos);
+                    _lastPos = enemyPos;
+
+                    if (moved < 0.25f) _stuckTimer += delta;
+                    else _stuckTimer = 0;
+
+                    // tính khoảng cách mong muốn
+                    float desired = _combat.AttackEnterRange > 0f ? _combat.AttackEnterRange : (_combat.AttackRange * 0.8f);
+
+                    float minDist = (_minDistOverride > 0f) ? _minDistOverride : Mathf.Max(12f, desired - 4f);
+                    float maxDist = (_maxDistOverride > 0f) ? _maxDistOverride : Mathf.Max(minDist + 6f, desired + 10f);
+
+                    Vector2 toTarget = targetPos - enemyPos;
+                    float dist = toTarget.Length();
+
+                    if (dist < 0.001f)
+                    {
+                        // cực hiếm: trùng vị trí -> đẩy ra hướng bất kỳ
+                        Vector2 push = new Vector2(1, 0) * _enemy.RunSpeed * _repositionSpeedScale;
+                        _move.SetDesiredVelocity(push);
+                    }
+                    else
+                    {
+                        Vector2 dir = toTarget / dist;
+                        Vector2 tangent = new Vector2(-dir.Y, dir.X) * _strafeSign;
+
+                        // radial correction để KHÔNG BAO GIỜ dính vào player
+                        Vector2 radial = Vector2.Zero;
+                        if (dist < minDist) radial = -dir;        // quá gần -> lùi ra
+                        else if (dist > maxDist) radial = dir;    // quá xa -> áp vào nhẹ
+
+                        // trộn hướng: ưu tiên chạy vòng, nhưng luôn tránh dính sát
+                        Vector2 moveDir = (tangent * 0.85f + radial * 0.55f);
+
+                        if (moveDir.LengthSquared() < 0.0001f)
+                            moveDir = tangent;
+
+                        moveDir = moveDir.Normalized();
+
+                        float speed = _enemy.RunSpeed * _repositionSpeedScale;
+                        _move.SetDesiredVelocity(moveDir * speed);
+                    }
+
+                    // Kết thúc reposition khi:
+                    // - hết timer
+                    // - hoặc bị kẹt quá lâu (thoát chắc chắn)
+                    if (_repositionTimer <= 0 || _stuckTimer >= 0.45)
+                    {
+                        _move.Stop();
+                        _bb.IsChasing = false;
+
+                        _phase = Phase.Settle;
+                        _settleTimer = _settleTime;
+                    }
+                    return;
+                }
+
+            case Phase.Settle:
+                {
+                    // DỪNG 1 NHỊP
+                    _bb.IsAttacking = false;
+                    _bb.IsChasing = false;
+                    _move.Stop();
+
+                    _settleTimer -= delta;
+                    if (_settleTimer <= 0)
+                        _phase = Phase.ReadyToAttack;
+
+                    return;
+                }
+
+            case Phase.ReadyToAttack:
+            default:
+                {
+                    // ĐỨNG YÊN CHỜ ĐÁNH
+                    _bb.IsAttacking = false;
+                    _bb.IsChasing = false;
+                    _move.Stop();
+
+                    if (_combat.CanAttack(target) && _combat.IsInRange(target))
+                    {
+                        // Bắt đầu đánh
+                        _combat.DoAttack(target);
+
+                        // giữ swing trong 1 khoảng cố định (thoát chắc chắn)
+                        // (có thể chỉnh fallbackSwingTime cho khớp anim)
+                        _swingTimer = _fallbackSwingTime;
+
+                        _phase = Phase.Swinging;
+                        return;
+                    }
+
+                    return;
+                }
         }
+    }
 
-        // ===== Orbit / Strafe khi cooldown =====
-        Vector2 to = target.GlobalPosition - _enemy.GlobalPosition;
-        float dist = to.Length();
-        if (dist < 0.001f)
-        {
-            _move.Stop();
-            return;
-        }
+    private void BeginReposition(Node2D target)
+    {
+        _phase = Phase.Repositioning;
 
-        Vector2 dir = to / dist; // hướng tới target
-        Vector2 tangent = new Vector2(-dir.Y, dir.X) * _orbitSign; // chạy vòng quanh
+        // random hướng chạy vòng
+        _strafeSign = GD.Randf() < 0.5f ? -1 : 1;
 
-        // Khoảng cách mong muốn để "đánh mà không dính sát"
-        float desired = _combat.AttackEnterRange > 0f ? _combat.AttackEnterRange : _combat.AttackRange * 0.8f;
+        // random thời gian chạy (không dùng điểm đích => không thể trúng vị trí player)
+        float tmin = Mathf.Max(0.10f, _repositionTimeMin);
+        float tmax = Mathf.Max(tmin, _repositionTimeMax);
+        _repositionTimer = Mathf.Lerp(tmin, tmax, GD.Randf());
 
-        // Sửa khoảng cách: quá sát -> lùi, quá xa -> áp vào
-        Vector2 radial = Vector2.Zero;
-        if (dist < desired - _orbitBand) radial = -dir;
-        else if (dist > desired + _orbitBand) radial = dir;
+        _lastPos = _enemy.GlobalPosition;
+        _stuckTimer = 0;
 
-        // nếu sắp vượt khỏi tầm đánh thì kéo vào mạnh hơn
-        if (dist > _combat.AttackRange - 1f) radial = dir;
-
-        Vector2 moveDir = (tangent + radial * _radialWeight).Normalized();
-        float speed = _enemy.RunSpeed * _strafeSpeedScale;
-
-        _move.SetDesiredVelocity(moveDir * speed);
+        _bb.IsChasing = true;
     }
 }

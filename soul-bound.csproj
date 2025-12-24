@@ -5,4 +5,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>soulbound</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="core\" />
+  </ItemGroup>
 </Project>

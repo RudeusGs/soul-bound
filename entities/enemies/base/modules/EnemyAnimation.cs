@@ -26,12 +26,16 @@ public partial class EnemyAnimation : Node
 
         if (HasAttackAnim && bb.IsAttacking)
         {
-            UpdateFacingFromTargetIfAny(bb);
+            if (bb.AttackFacingLocked)
+                bb.Facing = bb.AttackFacing;
+            else
+                UpdateFacingFromTargetIfAny(bb);
 
             var anim = $"{AnimPrefix}_attack_{FacingToSuffix(bb.Facing)}";
             Play(anim);
             return;
         }
+
 
         var v = _enemy.Velocity;
         float speed = v.Length();

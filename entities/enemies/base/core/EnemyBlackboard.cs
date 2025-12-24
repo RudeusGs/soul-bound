@@ -29,6 +29,9 @@ public sealed class EnemyBlackboard
     /// - Ghi bởi: EnemyMemory.OnSee, AttackRangeSensor (khi vào range), EnemyBrain.OnDamaged
     /// - Đọc bởi: UtilityBrain (score), Chase/Attack states, EnemyAnimation (UpdateFacingFromTargetIfAny)
     /// </summary>
+    /// 
+    public bool AttackFacingLocked = false;
+    public FacingDir AttackFacing = FacingDir.Down;
     public Node2D Target;
 
     /// <summary>

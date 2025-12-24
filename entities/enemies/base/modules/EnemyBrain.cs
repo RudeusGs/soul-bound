@@ -107,7 +107,7 @@ public partial class EnemyBrain : Node
         _sm.Add(new PatrolState(_enemy, _movement, _homePos, radius: 200f, stopDist: 6f));
         _sm.Add(new InvestigateState(_enemy, _movement, _bb));
         _sm.Add(new ChaseState(_enemy, _movement, _bb, stopEnter: 22f, stopExit: 28f, leadTime: 0.25f));
-        _sm.Add(new AttackState(_enemy, _movement, _combat, _bb));
+        _sm.Add(new AttackState(_movement, _combat, _bb));
         _sm.Add(new ReturnHomeState(_enemy, _movement, _homePos));
 
         _sm.Change<PatrolState>();
@@ -121,15 +121,10 @@ public partial class EnemyBrain : Node
             _stateLockTimer = Math.Max(0, _stateLockTimer - delta);
 
         var action = _utility.Decide();
-
-        // 1) Urgent actions phải chuyển ngay (không bị lock)
         bool urgent =
             action == UtilityAction.Attack ||
             action == UtilityAction.Chase ||
             (_bb.LeashBroken && action == UtilityAction.ReturnHome);
-
-
-        // 2) Nếu state hiện tại "kẹt" / không còn hợp lệ -> cho phép thoát ngay
         bool forceExitStuck =
             (_sm.Current is ChaseState && (_bb.Target == null || !_bb.Target.IsInsideTree()) && _bb.LoseSightTimer <= 0 && !_bb.HasLastKnownPos)
             || (_sm.Current is InvestigateState && _bb.Target != null && _bb.Target.IsInsideTree());
@@ -137,7 +132,7 @@ public partial class EnemyBrain : Node
         if (urgent || forceExitStuck || _stateLockTimer <= 0)
         {
             if (SwitchIfNeeded(action))
-                _stateLockTimer = 0.20; // chống flip-flop cho các state không urgent
+                _stateLockTimer = 0.20;
         }
 
         _sm.Tick(delta);
@@ -166,7 +161,19 @@ public partial class EnemyBrain : Node
                 return _sm.Change<ReturnHomeState>();
 
             case UtilityAction.Patrol:
-                return _sm.Change<PatrolState>();
+                {
+                    bool wasReturnHome = _sm.Current is ReturnHomeState;
+                    var changed = _sm.Change<PatrolState>();
+
+                    if (wasReturnHome)
+                    {
+                        _vision?.RescanNow();
+                        _attackRange?.RescanNow();
+                    }
+
+                    return changed;
+                }
+
             default:
                 _bb.IsAttacking = false;
                 return _sm.Change<PatrolState>();
@@ -179,22 +186,15 @@ public partial class EnemyBrain : Node
     {
         if (attacker == null || _bb.IsDead)
             return;
-
-        // Nếu leash đứt: chỉ phản kích ngắn, không chase
         if (_bb.LeashBroken)
         {
             _bb.Target = attacker;
             _bb.RetaliateTimer = 1.0;
-
-            // RequestAttack chỉ true khi thật sự đang trong tầm đánh (tránh giữ target “ảo”)
             _bb.RequestAttack = _combat.IsInRange(attacker);
         }
-
-        // 1) Tăng mạnh nghi ngờ & cảnh giác
         _bb.Suspicion = Mathf.Clamp(_bb.Suspicion + 0.9f, 0f, 1f);
         _bb.Alertness = Mathf.Clamp(_bb.Alertness + 0.7f, 0f, 1f);
         _bb.DamageAwareness = Mathf.Clamp(_bb.DamageAwareness + 1.0f, 0f, 1f);
-        // 2) Nếu thấy được attacker → lock target
         if (attacker.IsInsideTree())
         {
             _bb.Target = attacker;
@@ -204,7 +204,6 @@ public partial class EnemyBrain : Node
         }
         else
         {
-            // 3) Không thấy rõ → chỉ biết hướng/điểm bị đánh
             _bb.LastKnownTargetPos = _enemy.GlobalPosition;
             _bb.HasLastKnownPos = true;
             _bb.TimeSinceLastHeard = 0;

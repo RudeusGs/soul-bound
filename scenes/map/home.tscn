@@ -8,4 +8,3 @@
 [node name="player" parent="." instance=ExtResource("1_rbjhn")]
 
 [node name="goblin1" parent="." instance=ExtResource("3_yec3x")]
-position = Vector2(333, 201)
