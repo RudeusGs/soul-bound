@@ -1,41 +1,37 @@
 using Godot;
 
-/// <summary>
-/// DamageNumberSpawner
-///
-/// Helper static để spawn damage number.
-/// EnemyCombat chỉ gọi class này.
-/// </summary>
 public static class DamageNumberSpawner
 {
     private static PackedScene _scene;
 
     public static void Init()
     {
-        if (_scene == null)
-        {
-            _scene = GD.Load<PackedScene>(
-                "res://ui/combat/DamageNumber.tscn"
-            );
-        }
+        _scene ??= GD.Load<PackedScene>("res://ui/combat/DamageNumber.tscn");
     }
 
+    /// <summary>
+    /// Spawn DamageNumber lên scene hiện tại (an toàn hơn add vào Root).
+    /// </summary>
     public static void Spawn(
-        int damage,
+        int value,
         Vector2 worldPos,
-        bool isCrit = false,
-        bool isBlocked = false)
+        DamageNumber.DmgKind kind)
     {
-        if (_scene == null)
-            Init();
+        if (_scene == null) Init();
+
+        var tree = Engine.GetMainLoop() as SceneTree;
+        var parent = tree?.CurrentScene ?? tree?.Root;
+        if (parent == null) return;
 
         var instance = _scene.Instantiate<DamageNumber>();
-        var tree = Engine.GetMainLoop() as SceneTree;
-        var root = tree.Root;
+        parent.AddChild(instance);
 
-        root.AddChild(instance);
         instance.GlobalPosition = worldPos;
-
-        instance.Play(damage, isCrit, isBlocked);
+        instance.Play(value, kind);
     }
+
+    public static void SpawnNormal(int value, Vector2 pos) => Spawn(value, pos, DamageNumber.DmgKind.Normal);
+    public static void SpawnCrit(int value, Vector2 pos) => Spawn(value, pos, DamageNumber.DmgKind.Crit);
+    public static void SpawnTrue(int value, Vector2 pos) => Spawn(value, pos, DamageNumber.DmgKind.True);
+    public static void SpawnMiss(Vector2 pos) => Spawn(0, pos, DamageNumber.DmgKind.Miss);
 }

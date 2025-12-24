@@ -29,4 +29,10 @@ public partial class AttackRangeSensor : Area2D
 
         InRangeChanged?.Invoke(n2d, false);
     }
+    public void RescanNow()
+    {
+        foreach (var body in GetOverlappingBodies())
+            OnBodyEntered(body);
+    }
+
 }

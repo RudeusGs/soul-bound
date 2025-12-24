@@ -60,6 +60,11 @@ public partial class VisionSensor : Area2D
         BodyEntered += OnBodyEntered;
         BodyExited += OnBodyExited;
     }
+    public void RescanNow()
+    {
+        foreach (var body in GetOverlappingBodies())
+            OnBodyEntered(body);
+    }
 
     /// <summary>
     /// Được gọi khi có body đi vào vùng nhìn.

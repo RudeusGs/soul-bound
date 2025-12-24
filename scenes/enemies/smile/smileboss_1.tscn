@@ -995,8 +995,8 @@ radius = 516.0349
 radius = 67.06713
 
 [node name="smileboss1" instance=ExtResource("1_eg4jx")]
-WalkSpeed = 100.0
-RunSpeed = 130.0
+WalkSpeed = 130.0
+RunSpeed = 170.0
 
 [node name="AnimatedSprite2D" parent="." index="0"]
 sprite_frames = SubResource("SpriteFrames_gqwdu")
@@ -1006,6 +1006,12 @@ frame_progress = 0.26536024
 [node name="CollisionShape2D" parent="." index="1"]
 position = Vector2(1, 4)
 shape = SubResource("CircleShape2D_0sfba")
+
+[node name="EnemyCombat" parent="." index="3"]
+AttackRange = 40.0
+AttackEnterRange = 40.0
+AttackCooldown = 0.3
+HitFrame = 6
 
 [node name="CollisionShape2D" parent="VisionArea" index="0"]
 shape = SubResource("CircleShape2D_26q5v")
