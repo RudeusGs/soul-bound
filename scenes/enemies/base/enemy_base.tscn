@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://64snhbx87i0w"]
+[gd_scene load_steps=11 format=3 uid="uid://64snhbx87i0w"]
 
 [ext_resource type="Script" uid="uid://cu4ghjeby4axw" path="res://entities/enemies/base/core/Enemy.cs" id="1_cuvyx"]
 [ext_resource type="Script" uid="uid://cksqqa5g5h6af" path="res://entities/enemies/base/modules/EnemyMovement.cs" id="2_d2rjt"]
@@ -8,7 +8,6 @@
 [ext_resource type="Script" uid="uid://dvrjc8rfqgi4a" path="res://entities/enemies/ai/perception/VisionSensor.cs" id="6_d2rjt"]
 [ext_resource type="Script" uid="uid://2ekb6r542gpq" path="res://entities/enemies/ai/memory/MemoryConfig.cs" id="6_nck0n"]
 [ext_resource type="Script" uid="uid://dl6jad8vxelrx" path="res://entities/enemies/ai/perception/AttackRangeSensor.cs" id="7_u4hpe"]
-[ext_resource type="Script" uid="uid://cp7sx62dvpsek" path="res://entities/enemies/base/modules/EnemyHitReceiver.cs" id="9_f7vtg"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_edvsq"]
 animations = [{
@@ -57,6 +56,3 @@ script = ExtResource("6_d2rjt")
 script = ExtResource("7_u4hpe")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackRangeArea"]
-
-[node name="EnemyHitReceiver" type="Node" parent="."]
-script = ExtResource("9_f7vtg")

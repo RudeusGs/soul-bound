@@ -1,10 +1,11 @@
-[gd_scene load_steps=138 format=3 uid="uid://d1pq26n1tt0ir"]
+[gd_scene load_steps=139 format=3 uid="uid://d1pq26n1tt0ir"]
 
 [ext_resource type="PackedScene" uid="uid://64snhbx87i0w" path="res://scenes/enemies/base/enemy_base.tscn" id="1_eg4jx"]
 [ext_resource type="Texture2D" uid="uid://dknu0xktnjeav" path="res://assets/enemies/smile/smileboss1/Attack/Slime_boss1_Attack_full.png" id="2_26q5v"]
 [ext_resource type="Texture2D" uid="uid://cbj33m5bsy60c" path="res://assets/enemies/smile/smileboss1/Idle/Slime_boss1_Idle_full.png" id="2_at43i"]
 [ext_resource type="Texture2D" uid="uid://bauxan1863yyi" path="res://assets/enemies/smile/smileboss1/Run/Slime_boss1_Run_full.png" id="3_4tar4"]
 [ext_resource type="Texture2D" uid="uid://dx43qdu4lhqgy" path="res://assets/enemies/smile/smileboss1/Walk/Slime_boss1_Walk_full.png" id="3_l7x1i"]
+[ext_resource type="Script" uid="uid://nbae0bke4rm5" path="res://entities/enemies/base/modules/EnemyHitReceiver.cs" id="6_0sfba"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_n80x6"]
 atlas = ExtResource("2_26q5v")
@@ -1012,6 +1013,9 @@ AttackRange = 40.0
 AttackEnterRange = 40.0
 AttackCooldown = 0.3
 HitFrame = 6
+
+[node name="EnemyHitReceiver" type="Node" parent="." index="6"]
+script = ExtResource("6_0sfba")
 
 [node name="CollisionShape2D" parent="VisionArea" index="0"]
 shape = SubResource("CircleShape2D_26q5v")

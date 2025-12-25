@@ -749,8 +749,8 @@ RunSpeed = 210.0
 
 [node name="AnimatedSprite2D" parent="." index="0"]
 sprite_frames = SubResource("SpriteFrames_q344k")
-animation = &"goblin1_walk_down"
-frame_progress = 0.12197722
+animation = &"goblin1_attack_right"
+frame_progress = 0.8811747
 
 [node name="CollisionShape2D" parent="." index="1"]
 position = Vector2(-0.75, 5)
