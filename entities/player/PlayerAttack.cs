@@ -34,7 +34,6 @@ public partial class PlayerAttack : Node
 
         if (_isAttacking)
         {
-            ProcessHitboxHits();
             if (_timer <= 0f)
                 EndAttack();
             return;
@@ -94,6 +93,7 @@ public partial class PlayerAttack : Node
         }
 
         hitbox.Monitoring = false;
+        hitbox.BodyEntered += OnHitboxBodyEntered;
         _hitboxes[dirKey] = hitbox;
     }
 
@@ -116,25 +116,22 @@ public partial class PlayerAttack : Node
         _activeHitbox = null;
     }
 
-    private void ProcessHitboxHits()
+    private void OnHitboxBodyEntered(Node body)
     {
-        if (_activeHitbox == null || !_activeHitbox.Monitoring)
+        if (!_isAttacking || _activeHitbox == null || !_activeHitbox.Monitoring)
             return;
 
-        foreach (var body in _activeHitbox.GetOverlappingBodies())
-        {
-            if (body is not Node2D target)
-                continue;
+        if (body is not Node2D target)
+            return;
 
-            if (target == _player || _hitTargets.Contains(target))
-                continue;
+        if (target == _player || _hitTargets.Contains(target))
+            return;
 
-            if (!IsEnemyTarget(target))
-                continue;
+        if (!IsEnemyTarget(target))
+            return;
 
-            if (ApplyHitToTarget(target))
-                _hitTargets.Add(target);
-        }
+        if (ApplyHitToTarget(target))
+            _hitTargets.Add(target);
     }
 
     private static bool IsEnemyTarget(Node2D target)
