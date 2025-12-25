@@ -132,43 +132,44 @@ public partial class PlayerAttack : Node
             if (!IsEnemyTarget(target))
                 continue;
 
-            if (TryCallOnHit(target))
+            if (ApplyHitToTarget(target))
                 _hitTargets.Add(target);
         }
     }
 
     private static bool IsEnemyTarget(Node2D target)
     {
-        return target.IsInGroup("enemy") || target.HasMethod("OnHit");
+        return target.IsInGroup("enemy") || target is Enemy;
     }
 
-    private bool TryCallOnHit(Node2D target)
+    private bool ApplyHitToTarget(Node2D target)
     {
-        if (target.HasMethod("OnHit"))
+        if (target is Enemy enemy)
         {
-            target.Call("OnHit", _player);
+            enemy.OnDamaged(_player);
+            FlashEnemySprite(enemy);
             return true;
         }
 
-        foreach (var childName in new[] { "EnemyHitReceiver", "HitReceiver", "DamageReceiver" })
-        {
-            var n = target.GetNodeOrNull<Node>(childName);
-            if (n != null && n.HasMethod("OnHit"))
-            {
-                n.Call("OnHit", _player);
-                return true;
-            }
-        }
-
-        foreach (var c in target.GetChildren())
-        {
-            if (c is Node n && n.HasMethod("OnHit"))
-            {
-                n.Call("OnHit", _player);
-                return true;
-            }
-        }
-
         return false;
+    }
+
+    private void FlashEnemySprite(Enemy enemy)
+    {
+        var sprite = enemy.GetNodeOrNull<CanvasItem>("AnimatedSprite2D");
+        if (sprite != null)
+        {
+            CombatVfx.HitFlash(sprite);
+            return;
+        }
+
+        foreach (var child in enemy.GetChildren())
+        {
+            if (child is CanvasItem canvas)
+            {
+                CombatVfx.HitFlash(canvas);
+                return;
+            }
+        }
     }
 }
