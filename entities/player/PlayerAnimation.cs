@@ -4,7 +4,7 @@ public partial class PlayerAnimation : Node
 {
     private AnimatedSprite2D _sprite;
     private string _lastDir = "down";
-
+    public string LastDirection => _lastDir;
     // Lấy AnimatedSprite2D của Player
     public override void _Ready()
     {
